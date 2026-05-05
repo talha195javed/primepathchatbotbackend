@@ -30,4 +30,4 @@ const requireClient = (req, res, next) => {
     next();
 };
 
-module.exports = { authenticate, requireSuperAdmin, requireClient };
+module.exports = { authenticate, authenticateToken: authenticate, requireSuperAdmin, requireClient };

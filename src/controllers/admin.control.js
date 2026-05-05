@@ -126,7 +126,7 @@ const getAgentDetail = async (req, res) => {
 
 const createAgent = async (req, res) => {
     const companyId = req.user.role === 'super_admin' ? req.body.companyId : req.user.companyId;
-    const { name, description, type, style, industry, botInstructions } = req.body;
+    const { name, description, type, style, industry, botInstructions, photoUrl, chatIconUrl } = req.body;
     if (!companyId || !name) return res.status(400).json({ error: 'companyId and name required' });
 
     const conn = await pool.getConnection();
@@ -135,16 +135,16 @@ const createAgent = async (req, res) => {
 
         const agentId = uuidv4();
         await conn.query(
-            `INSERT INTO agents (id, company_id, name, description, type, style, industry, bot_instructions)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [agentId, companyId, name, description || null, type || 'lead', style || 'friendly', industry || 'other', botInstructions || null]
+            `INSERT INTO agents (id, company_id, name, description, type, style, industry, bot_instructions, photo_url, chat_icon_url)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [agentId, companyId, name, description || null, type || 'lead', style || 'friendly', industry || 'other', botInstructions || null, photoUrl || null, chatIconUrl || null]
         );
 
         const widgetId = uuidv4();
         await conn.query(
-            `INSERT INTO agent_widgets (id, agent_id, company_id, theme, main_color, main_text_color)
-             VALUES (?, ?, ?, 'light', '#2563eb', '#ffffff')`,
-            [widgetId, agentId, companyId]
+            `INSERT INTO agent_widgets (id, agent_id, company_id, theme, main_color, main_text_color, chat_icon_url)
+             VALUES (?, ?, ?, 'light', '#2563eb', '#ffffff', ?)`,
+            [widgetId, agentId, companyId, chatIconUrl || null]
         );
 
         await conn.commit();
@@ -159,7 +159,7 @@ const createAgent = async (req, res) => {
 
 const updateAgent = async (req, res) => {
     const { agentId } = req.params;
-    const { name, description, type, style, industry, botInstructions, model, temperature } = req.body;
+    const { name, description, type, style, industry, botInstructions, model, temperature, photoUrl, chatIconUrl } = req.body;
 
     const conn = await pool.getConnection();
     try {
@@ -180,6 +180,8 @@ const updateAgent = async (req, res) => {
         if (botInstructions !== undefined) { fields.push('bot_instructions = ?'); values.push(botInstructions); }
         if (model !== undefined) { fields.push('model = ?'); values.push(model); }
         if (temperature !== undefined) { fields.push('temperature = ?'); values.push(temperature); }
+        if (photoUrl !== undefined) { fields.push('photo_url = ?'); values.push(photoUrl); }
+        if (chatIconUrl !== undefined) { fields.push('chat_icon_url = ?'); values.push(chatIconUrl); }
 
         if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
@@ -337,9 +339,27 @@ const getAllCompanies = async (req, res) => {
     }
 };
 
+// Upload image for agent profile/chat icon
+const uploadImage = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        // For now, return the file path. In production, you'd upload to cloud storage
+        const fileUrl = `/uploads/${req.file.filename}`;
+        
+        res.json({ url: fileUrl });
+    } catch (err) {
+        console.error('Upload error:', err);
+        res.status(500).json({ error: 'Failed to upload image' });
+    }
+};
+
 module.exports = {
     getAllClients, createClient,
     getAgents, getAgentDetail, createAgent, updateAgent, updateWidget,
     getThreads, getThreadMessages,
-    getDashboardStats, getAllCompanies
+    getDashboardStats, getAllCompanies,
+    uploadImage
 };

@@ -6,6 +6,7 @@ const http = require('http');
 const { initDB } = require('./config/db.config');
 const routes = require('./routes/index.route');
 const { setupSocket } = require('./services/helpers/socket.helper.service');
+const reminderService = require('./services/reminder.service');
 
 const app = express();
 const server = http.createServer(app);
@@ -30,6 +31,9 @@ app.set('trust proxy', 1);
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
+
 // Test route
 app.get('/test', (req, res) => res.send('PrimePath Chatbot API working'));
 
@@ -44,6 +48,9 @@ app.use((err, req, res, next) => {
 
 // Initialize database and start server
 initDB().then(() => {
+    // Start reminder service
+    reminderService.start();
+    
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, () => {
         console.log(`PrimePath Chatbot API running on port ${PORT}`);
